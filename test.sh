@@ -48,6 +48,20 @@ check "context ?" \
   '{"model":{"id":"x"},"workspace":{"current_dir":"/tmp/p"}}' \
   "missing context fields"
 
+# transcript fallback: payload zeros + transcript_path -> real usage from JSONL tail
+cat > "$HOME/fake-transcript.jsonl" <<'EOF'
+{"message":{"usage":{"input_tokens":10,"cache_read_input_tokens":0,"output_tokens":5}}}
+garbage line
+{"message":{"usage":{"input_tokens":389,"cache_creation_input_tokens":0,"cache_read_input_tokens":125952,"output_tokens":1074}}}
+EOF
+check "126k/1M" \
+  "{\"model\":{\"id\":\"x\"},\"workspace\":{\"current_dir\":\"/tmp/p\"},\"transcript_path\":\"$HOME/fake-transcript.jsonl\",\"context_window\":{\"context_window_size\":1000000}}" \
+  "transcript fallback fills context"
+
+check "context ?" \
+  "{\"model\":{\"id\":\"x\"},\"workspace\":{\"current_dir\":\"/tmp/p\"},\"transcript_path\":\"$HOME/missing.jsonl\",\"context_window\":{\"context_window_size\":1000000}}" \
+  "unreadable transcript stays ?"
+
 out=$(echo "{\"model\":{\"id\":\"x\"},\"workspace\":{\"current_dir\":\"/tmp/a/b/c/d/e\"},\"context_window\":$CTX15}" \
   | COLUMNS=40 python3 statusline.py)
 echo "$out" | grep -q "…/" && echo "PASS: narrow width truncates path" || { echo "FAIL: narrow width truncates path"; fail=1; }

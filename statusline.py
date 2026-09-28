@@ -81,6 +81,30 @@ def truncate_path(p, keep=2):
     return "…/" + "/".join(parts[-(keep + 1):])
 
 
+def ctx_from_transcript(tp):
+    """Fallback for gateways that don't populate the payload's context numbers:
+    read the last assistant usage block from the session transcript JSONL.
+    Context fill = input + cache_creation + cache_read of the latest API call."""
+    try:
+        with open(tp, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            f.seek(max(0, size - 512 * 1024))
+            lines = f.read().decode("utf-8", "ignore").splitlines()
+    except Exception:
+        return 0
+    for line in reversed(lines):
+        try:
+            d = json.loads(line)
+        except Exception:
+            continue
+        u = (d.get("message") or {}).get("usage")
+        if u and (u.get("input_tokens") or u.get("cache_read_input_tokens")):
+            return (u.get("input_tokens", 0) + u.get("cache_creation_input_tokens", 0)
+                    + u.get("cache_read_input_tokens", 0))
+    return 0
+
+
 def main():
     no_color = bool(os.environ.get("NO_COLOR"))
     cfg = load_cfg()
@@ -119,6 +143,8 @@ def main():
     mx = cw.get("context_window_size") or cw.get("max_tokens") or 0
     u = ((cw.get("total_input_tokens") or 0) + (cw.get("total_output_tokens") or 0)) \
         or cw.get("used_tokens") or 0
+    if not u and d.get("transcript_path"):
+        u = ctx_from_transcript(d["transcript_path"])
     if mx and u:
         pct = min(1.0, max(0.0, u / mx))
         ckey = "ok" if pct < cfg["thresholds"]["warn"] else \
