@@ -21,7 +21,7 @@ DEFAULTS = {
     "colors": {"path": "cyan", "model": "blue", "effort": "magenta", "sep": "bright-black",
                "ok": "green", "warn": "yellow", "crit": "red"},
     "thresholds": {"warn": 0.60, "crit": 0.85},
-    "bar": {"enabled": True, "width": 16, "chars": "█░"},
+    "bar": {"enabled": True, "width": 10, "chars": "█░"},
     "effort_label": "",
     "model_names": {},  # e.g. {"glm-5.3": "GLM-5.3", "swe-2": "SWE-2"}
 }
