@@ -34,13 +34,14 @@ Each patched file gets a `.bak` backup. Re-running skips already-patched files.
 
 | Segment | Color | Behavior |
 |---|---|---|
-| path | cyan | cwd with `~` abbreviated; truncated from the left on narrow terminals |
+| path | cyan | cwd with `~` abbreviated; truncated from the left only when it alone exceeds ~60% of the width |
 | model | blue | prefix match against `model_names`, else raw model id |
-| effort | magenta | payload `effort.level` → `$CLAUDE_CODE_EFFORT_LEVEL` → `default`; unknown levels get `?` |
+| effort | magenta | bare level (`max`); payload `effort.level` → `$CLAUDE_CODE_EFFORT_LEVEL` → `default`; unknown levels get `?` |
 | context | green/yellow/red | `used/max x.x% used` + 16-cell bar; `<60%` green, `<85%` yellow, else red |
 
-Also: `NO_COLOR` disables colors. `$COLUMNS` too small → drop the bar, then
-truncate the path. Token counts render as `155k` / `1M` (never `1000k`).
+Also: `NO_COLOR` disables colors. When the row exceeds `$COLUMNS`, segments
+wrap onto a second line at `·` boundaries — nothing is dropped. Token counts
+render as `155k` / `1M` (never `1000k`).
 
 ## Configure
 

@@ -62,10 +62,17 @@ check "context ?" \
   "{\"model\":{\"id\":\"x\"},\"workspace\":{\"current_dir\":\"/tmp/p\"},\"transcript_path\":\"$HOME/missing.jsonl\",\"context_window\":{\"context_window_size\":1000000}}" \
   "unreadable transcript stays ?"
 
-out=$(echo "{\"model\":{\"id\":\"x\"},\"workspace\":{\"current_dir\":\"/tmp/a/b/c/d/e\"},\"context_window\":$CTX15}" \
+out=$(echo "{\"model\":{\"id\":\"x\"},\"workspace\":{\"current_dir\":\"/tmp/a/very/long/directory/path/here\"},\"context_window\":$CTX15}" \
   | COLUMNS=40 python3 statusline.py)
-echo "$out" | grep -q "…/" && echo "PASS: narrow width truncates path" || { echo "FAIL: narrow width truncates path"; fail=1; }
-echo "$out" | grep -q "█" && { echo "FAIL: narrow width drops bar"; fail=1; } || echo "PASS: narrow width drops bar"
+echo "$out" | grep -q "…/" && echo "PASS: oversized path truncates" || { echo "FAIL: oversized path truncates"; fail=1; }
+echo "$out" | grep -q "█" && echo "PASS: bar kept when wrapping" || { echo "FAIL: bar kept when wrapping"; fail=1; }
+
+out=$(echo "{\"model\":{\"id\":\"glm-5.3\"},\"workspace\":{\"current_dir\":\"/tmp/a/reasonably/long/path\"},\"effort\":{\"level\":\"max\"},\"context_window\":$CTX15}" \
+  | COLUMNS=60 python3 statusline.py)
+[ "$(echo "$out" | wc -l | tr -d ' ')" -ge 2 ] && echo "$out" | grep -q "█" && echo "PASS: overflow wraps to 2nd line, bar kept" \
+  || { echo "FAIL: overflow wraps to 2nd line, bar kept"; fail=1; }
+echo "$out" | grep -q "effort:" && { echo "FAIL: effort label removed"; fail=1; } || echo "PASS: effort label removed"
+echo "$out" | grep -q "max" && echo "PASS: bare effort level shown" || { echo "FAIL: bare effort level shown"; fail=1; }
 
 out=$(echo "{\"model\":{\"id\":\"x\"},\"workspace\":{\"current_dir\":\"/tmp/p\"},\"context_window\":$CTX15}" \
   | NO_COLOR=1 python3 statusline.py)

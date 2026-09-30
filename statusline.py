@@ -22,7 +22,7 @@ DEFAULTS = {
                "ok": "green", "warn": "yellow", "crit": "red"},
     "thresholds": {"warn": 0.60, "crit": 0.85},
     "bar": {"enabled": True, "width": 16, "chars": "█░"},
-    "effort_label": "effort:",
+    "effort_label": "",
     "model_names": {},  # e.g. {"glm-5.3": "GLM-5.3", "swe-2": "SWE-2"}
 }
 ANSI = {"black": 30, "red": 31, "green": 32, "yellow": 33, "blue": 34,
@@ -159,15 +159,28 @@ def main():
         ctx = f"{col('warn')}context ?{RESET}"
 
     sep = f"{col('sep')} · {RESET}"
-    line = (f"{col('path')}{path}{RESET}{sep}{col('model')}{name}{RESET}"
-            f"{sep}{col('effort')}{cfg['effort_label']}{e}{RESET}{sep}{ctx}")
+    segs = [f"{col('path')}{path}{RESET}",
+            f"{col('model')}{name}{RESET}",
+            f"{col('effort')}{cfg['effort_label']}{e}{RESET}",
+            ctx]
 
-    # ---- width-aware: truncate path, then drop the bar ----
+    # ---- width-aware: shrink an oversized path, then wrap at "·" boundaries ----
     cols = int(os.environ.get("COLUMNS") or 0)
-    if cols and vis_len(line) > cols:
-        line = line.replace(path, truncate_path(path), 1)
-    if cols and vis_len(line) > cols and cfg["bar"]["enabled"]:
-        line = re.sub(r" \033\[[0-9;]*m[█░]+\033\[0m", "", line)
+    if cols and vis_len(path) > max(16, cols * 3 // 5):
+        segs[0] = f"{col('path')}{truncate_path(path)}{RESET}"
+    if cols:
+        out, cur = [], ""
+        for s in segs:
+            add = (sep + s) if cur else s
+            if cur and vis_len(cur + add) > cols:
+                out.append(cur)
+                cur = s
+            else:
+                cur += add
+        out.append(cur)
+        line = "\n".join(out)
+    else:
+        line = sep.join(segs)
     sys.stdout.write(line + "\n")
 
 
